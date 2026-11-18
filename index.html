@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Longevity Gap · Who Outlives Whom?</title>
+  <meta name="description" content="Data Wranglers: an interactive look at life expectancy and the question 'Who outlives whom?'">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="hero">
+  <h1>The Longevity Gap</h1>
+
+  <p class="meta"><span class="label">Data</span>
+    <a href="https://github.com/light-and-salt/World-Bank-Data-by-Indicators" target="_blank" rel="noopener">World Bank Data by Indicators</a></p>
+  <p class="meta"><span class="label">Team</span> Data Wranglers</p>
+  <p class="meta"><span class="label">Team members</span> Mia Mantei, Ali Karim, Mahir Oza, Dennise Arenas</p>
+  <p class="meta"><span class="label">Topic</span> Life Expectancy</p>
+  <p class="meta"><span class="label">Question</span> Who Outlives Whom?</p>
+</header>
+
+<main>
+
+  <!-- VISUAL 5 · static for now. Everything the chart needs is drawn by script.js from life_expectancy_gap.csv -->
+  <section id="figure-1" class="figure" aria-labelledby="f1-title">
+    <p class="kicker">Figure 1</p>
+    <h2 id="f1-title" class="figure-title">&nbsp;</h2>
+    <p id="f1-subtitle" class="figure-subtitle"></p>
+
+    <div id="error" class="error" hidden>
+      Could not load <code>life_expectancy_gap.csv</code>. If you opened this file directly from disk,
+      start a small local server in this folder (<code>python3 -m http.server</code>) and visit
+      <code>http://localhost:8000</code>.
+    </div>
+
+    <div id="legend" class="legend"></div>
+    <div id="chart"></div>
+
+    <p id="f1-note" class="figure-note"></p>
+  </section>
+
+</main>
+
+<footer>
+  <p>Data: <a href="https://github.com/light-and-salt/World-Bank-Data-by-Indicators" target="_blank" rel="noopener">World Bank</a>. Built with <a href="https://d3js.org/" target="_blank" rel="noopener">D3.js</a>.</p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="script.js"></script>
+</body>
+</html>
