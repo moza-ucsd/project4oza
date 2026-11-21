@@ -134,7 +134,7 @@
 
       d3.select("#f1-subtitle").style("white-space", "pre-line").text(
         `Each row is one of the ${n} most populous countries (by ${MAX_YEAR} population). The dots show the gap between ` +
-        `female and male life expectancy at birth in years (female - male) in ${from} (open bubbles) and ${to} (filled bubles). ` +
+        `female and male life expectancy at birth in years (female - male) in ${from} (open bubbles) and ${to} (filled bubbles). ` +
         `\nRegional and income-group aggregates were removed. \nRows are sorted by ${SORTS[state.sort].text}.`
       );
 
@@ -483,7 +483,7 @@
       d3.select("#detail-sub").html(
         state.from === state.to
           ? `In <strong>${state.to}</strong>, women lived <strong>${fmt1(b.life_exp_female)}</strong> years and men <strong>${fmt1(b.life_exp_male)}</strong> — a gap of <strong>${signed(b.gap)}</strong> years.`
-          : `In <strong>${state.from}</strong> the gap betwen women's and men's ages was <strong>${signed(a.gap)}</strong> years; in <strong>${state.to}</strong> it was <strong>${signed(b.gap)}</strong> ` +
+          : `In <strong>${state.from}</strong> the gap between women's and men's ages was <strong>${signed(a.gap)}</strong> years; in <strong>${state.to}</strong> it was <strong>${signed(b.gap)}</strong> ` +
             `(women ${fmt1(b.life_exp_female)}, men ${fmt1(b.life_exp_male)}). The shaded band is the gap.`
       );
       countrySel.property("value", state.selected);
