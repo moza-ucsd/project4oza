@@ -18,15 +18,54 @@
   <p class="meta"><span class="label">Team members</span> Mia Mantei, Ali Karim, Mahir Oza, Dennise Arenas</p>
   <p class="meta"><span class="label">Topic</span> Life Expectancy</p>
   <p class="meta"><span class="label">Question</span> Who Outlives Whom?</p>
+  <p class="meta"><span class="label">Year</span> 2019</p>
 </header>
 
 <main>
 
-  <!-- VISUAL 5 · static for now. Everything the chart needs is drawn by script.js from life_expectancy_gap.csv -->
+  <!-- figure 1 -->
   <section id="figure-1" class="figure" aria-labelledby="f1-title">
     <p class="kicker">Figure 1</p>
     <h2 id="f1-title" class="figure-title">&nbsp;</h2>
     <p id="f1-subtitle" class="figure-subtitle"></p>
+
+    <div class="stories" role="group" aria-label="Explore a story">
+      <span class="stories-label">Explore a story</span>
+      <button type="button" class="chip" data-story="big" aria-pressed="true">The big picture</button>
+      <button type="button" class="chip" data-story="russia" aria-pressed="false">Russia after 1989</button>
+      <button type="button" class="chip" data-story="iran" aria-pressed="false">Iran in the 1980s</button>
+      <button type="button" class="chip" data-story="menfirst" aria-pressed="false">Where men once led</button>
+    </div>
+    <p id="story-text" class="story-text" aria-live="polite"></p>
+
+    <!-- controls -->
+    <div class="controls">
+      <div class="control">
+        <label for="from-year">Starting year <output id="from-out" for="from-year"></output></label>
+        <input id="from-year" type="range" min="1960" max="2019" step="1" value="1960">
+      </div>
+
+      <div class="control control-to">
+        <label for="to-year">End year <output id="to-out" for="to-year"></output></label>
+        <div class="to-row">
+          <button id="play" type="button" aria-pressed="false">▶ Play</button>
+          <input id="to-year" type="range" min="1960" max="2019" step="1" value="2019">
+        </div>
+      </div>
+
+      <div class="control">
+        <label for="sort">Sort rows by</label>
+        <select id="sort">
+          <option value="latest">Gap in 2019 (latest)</option>
+          <option value="end">Gap in the end year</option>
+          <option value="change">Change in the gap</option>
+          <option value="population">Population</option>
+          <option value="name">Name (A–Z)</option>
+        </select>
+      </div>
+    </div>
+
+    <p class="hint">Hover over a row for details · Click a country to zoom in and explore further below · Press 'Play' to watch the filled dots move through time.</p>
 
     <div id="error" class="error" hidden>
       Could not load <code>life_expectancy_gap.csv</code>. If you opened this file directly from disk,
@@ -38,6 +77,31 @@
     <div id="chart"></div>
 
     <p id="f1-note" class="figure-note"></p>
+
+    <!-- linked detail view -->
+    <div class="detail">
+      <div class="detail-head">
+        <h3 id="detail-title">Zoom in</h3>
+        <div class="detail-select">
+          <label for="country-select">Country</label>
+          <select id="country-select"></select>
+        </div>
+      </div>
+      <p id="detail-sub" class="detail-sub"></p>
+      <div id="detail-chart"></div>
+      <p class="hint">Click or drag on this chart to move the end year in the main chart.</p>
+    </div>
+  </section>
+
+  <!-- write-up for prototype webpage submission -->
+  <section id="prototype-notes" class="notes" aria-labelledby="notes-title">
+    <h2 id="notes-title">Prototype</h2>
+
+    <h3>What have we done so far?</h3>
+    <p>So far we have built the structure of the page and the first main figure, a dumbbell chart of the life expectancy gap between women and men. We used World Bank data on life expectancy at birth by sex. We took out regional and income-group totals so that each row is a real country, and we worked out the gap (female minus male, in years) for every country and year from 1960 to 2019. Figure 1 shows the 30 most populous countries, each with an open dot for its 1960 gap and a filled dot for its 2019 gap. The line between the dots is pink if the gap widens, blue if it narrows, and gray if it changes by less than half a year. Making the graph interactive allows exploring life expectancy across the 30 countries by different start and end years, sorting based on different factors of interest, and diving in deeper to a specific country of interest by exploring their life expectancy change over time.</p>
+
+    <h3>What will be the most challenging part to design, and why?</h3>
+    <p>The hardest part will be to make sure the interactive graphs in our final version teach the reader something a static chart can’t. A year slider seems simple, but dots that jump around are hard to follow, so the change needs smooth, consistent transitions to read as one story. A further challenge is explaining why the gap moves, through factors such as maternal health, smoking, war, and the alcohol-related deaths behind Russia’s 10-year gap. That means linking this chart to other World Bank indicators without crowding the page. Finally, the story needs a clear hook, middle and take away so the reader is guided instead of just shown data.</p>
   </section>
 
 </main>
@@ -45,6 +109,8 @@
 <footer>
   <p>Data: <a href="https://github.com/light-and-salt/World-Bank-Data-by-Indicators" target="_blank" rel="noopener">World Bank</a>. Built with <a href="https://d3js.org/" target="_blank" rel="noopener">D3.js</a>.</p>
 </footer>
+
+<div id="tooltip" class="tooltip" role="tooltip" aria-hidden="true"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 <script src="script.js"></script>
