@@ -9,6 +9,7 @@
 </head>
 <body>
 
+<!-- title and subtitle -->
 <header class="hero">
   <h1>The Longevity Gap</h1>
 
@@ -23,77 +24,259 @@
 
 <main>
 
-  <!-- figure 1 -->
-  <section id="figure-1" class="figure" aria-labelledby="f1-title">
-    <p class="kicker">Figure 1</p>
-    <h2 id="f1-title" class="figure-title">&nbsp;</h2>
-    <p id="f1-subtitle" class="figure-subtitle"></p>
+  <!-- intro / summary -->
+  <section id="intro" class="intro" aria-labelledby="intro-title">
+    <h2 id="intro-title" class="section-title">Overview</h2>
+    <p class="intro-text">Women outlive men in nearly every country on Earth, but how much longer they live, and what that means for societies, is far less obvious. This article uses World Bank data from 1960 to 2019 to ask a simple question: who outlives whom? We start with the 30 most populous countries and watch the gap between women's and men's life expectancy grow, shrink and, in a few places, flip. Then we widen the lens to every country with data: does the gap track how long people live overall, who actually survives to age 65, and how are longer lives changing the share of older people in a population? Every figure is interactive, so drag the sliders, press Play and click around to explore the story yourself.</p>
+  </section>
 
-    <div class="stories" role="group" aria-label="Explore a story">
-      <span class="stories-label">Explore a story</span>
-      <button type="button" class="chip" data-story="big" aria-pressed="true">The big picture</button>
-      <button type="button" class="chip" data-story="russia" aria-pressed="false">Russia after 1989</button>
-      <button type="button" class="chip" data-story="iran" aria-pressed="false">Iran in the 1980s</button>
-      <button type="button" class="chip" data-story="menfirst" aria-pressed="false">Where men once led</button>
+
+  <!-- figure 1 section -->
+  <section id="point-1" class="point" aria-labelledby="point-1-title">
+    <p class="kicker">Point 1</p>
+    <h2 id="point-1-title" class="section-title">Women now outlive men in the world's biggest countries</h2>
+
+    <div class="point-details">
+      <p>In 2019, women outlived men in all 30 of the world's most populous countries. That was not always true: in 1960 men lived longer in Bangladesh, India and Iran, while the gap was already around 7 to 8 years in Russia, South Korea and Vietnam. Since then the gap has widened by more than half a year in 18 of these countries, narrowed in 6 and barely moved in 6. Use the story buttons, drag the years or press Play to see which countries moved the most.</p>
     </div>
-    <p id="story-text" class="story-text" aria-live="polite"></p>
 
-    <!-- controls -->
-    <div class="controls">
-      <div class="control">
-        <label for="from-year">Starting year <output id="from-out" for="from-year"></output></label>
-        <input id="from-year" type="range" min="1960" max="2019" step="1" value="1960">
+    <!-- figure 1 -->
+    <section id="figure-1" class="figure" aria-labelledby="f1-title">
+      <p class="kicker">Figure 1</p>
+      <h2 id="f1-title" class="figure-title">&nbsp;</h2>
+      <p id="f1-subtitle" class="figure-subtitle"></p>
+
+      <div class="stories" role="group" aria-label="Explore a story">
+        <span class="stories-label">Explore a story</span>
+        <button type="button" class="chip" data-story="big" aria-pressed="true">The big picture</button>
+        <button type="button" class="chip" data-story="russia" aria-pressed="false">Russia after 1989</button>
+        <button type="button" class="chip" data-story="iran" aria-pressed="false">Iran in the 1980s</button>
+        <button type="button" class="chip" data-story="menfirst" aria-pressed="false">Where men once led</button>
       </div>
+      <p id="story-text" class="story-text" aria-live="polite"></p>
 
-      <div class="control control-to">
-        <label for="to-year">End year <output id="to-out" for="to-year"></output></label>
-        <div class="to-row">
-          <button id="play" type="button" aria-pressed="false">▶ Play</button>
-          <input id="to-year" type="range" min="1960" max="2019" step="1" value="2019">
+      <!-- controls -->
+      <div class="controls">
+        <div class="control">
+          <label for="from-year">Starting year <output id="from-out" for="from-year"></output></label>
+          <input id="from-year" type="range" min="1960" max="2019" step="1" value="1960">
+        </div>
+
+        <div class="control control-to">
+          <label for="to-year">End year <output id="to-out" for="to-year"></output></label>
+          <div class="to-row">
+            <button id="play" type="button" aria-pressed="false">▶ Play</button>
+            <input id="to-year" type="range" min="1960" max="2019" step="1" value="2019">
+          </div>
+        </div>
+
+        <div class="control">
+          <label for="sort">Sort rows by</label>
+          <select id="sort">
+            <option value="latest">Gap in 2019 (latest)</option>
+            <option value="end">Gap in the end year</option>
+            <option value="change">Change in the gap</option>
+            <option value="population">Population</option>
+            <option value="name">Name (A–Z)</option>
+          </select>
         </div>
       </div>
 
-      <div class="control">
-        <label for="sort">Sort rows by</label>
-        <select id="sort">
-          <option value="latest">Gap in 2019 (latest)</option>
-          <option value="end">Gap in the end year</option>
-          <option value="change">Change in the gap</option>
-          <option value="population">Population</option>
-          <option value="name">Name (A–Z)</option>
-        </select>
+      <p class="hint">Hover over a row for details · Click a country to zoom in and explore further below · Press 'Play' to watch the filled dots move through time.</p>
+
+      <div id="error" class="error" hidden>
+        Could not load <code>life_expectancy_gap.csv</code>. If you opened this file directly from disk,
+        start a small local server in this folder (<code>python3 -m http.server</code>) and visit
+        <code>http://localhost:8000</code>.
       </div>
-    </div>
 
-    <p class="hint">Hover over a row for details · Click a country to zoom in and explore further below · Press 'Play' to watch the filled dots move through time.</p>
+      <div id="legend" class="legend"></div>
+      <div id="chart"></div>
 
-    <div id="error" class="error" hidden>
-      Could not load <code>life_expectancy_gap.csv</code>. If you opened this file directly from disk,
-      start a small local server in this folder (<code>python3 -m http.server</code>) and visit
-      <code>http://localhost:8000</code>.
-    </div>
+      <p id="f1-note" class="figure-note"></p>
 
-    <div id="legend" class="legend"></div>
-    <div id="chart"></div>
-
-    <p id="f1-note" class="figure-note"></p>
-
-    <!-- linked detail view -->
-    <div class="detail">
-      <div class="detail-head">
-        <h3 id="detail-title">Zoom in</h3>
-        <div class="detail-select">
-          <label for="country-select">Country</label>
-          <select id="country-select"></select>
+      <!-- linked detail view -->
+      <div class="detail">
+        <div class="detail-head">
+          <h3 id="detail-title">Zoom in</h3>
+          <div class="detail-select">
+            <label for="country-select">Country</label>
+            <select id="country-select"></select>
+          </div>
         </div>
+        <p id="detail-sub" class="detail-sub"></p>
+        <div id="detail-chart"></div>
+        <p class="hint">Click or drag on this chart to move the end year in the main chart.</p>
       </div>
-      <p id="detail-sub" class="detail-sub"></p>
-      <div id="detail-chart"></div>
-      <p class="hint">Click or drag on this chart to move the end year in the main chart.</p>
+    </section>
+
+    <div class="point-main">
+      <p class="point-main-label">Main point</p>
+      <p>Women now outlive men in every one of the most populous countries, but the size of the gap ranges from under 2 years in Nigeria to almost 10 in Russia.</p>
     </div>
   </section>
 
-  <!-- write-up for prototype webpage submission -->
+
+  <!-- figure 2 section -->
+  <section id="point-2" class="point" aria-labelledby="point-2-title">
+    <p class="kicker">Point 2</p>
+    <h2 id="point-2-title" class="section-title">Does the gap grow as lives get longer?</h2>
+
+    <div class="point-details">
+      <p>insert details supporting figure 2</p>
+    </div>
+
+    <!-- figure 2 -->
+    <section id="figure-2" class="figure" aria-labelledby="f2-title">
+      <p class="kicker">Figure 2</p>
+      <h2 id="f2-title" class="figure-title">&nbsp;</h2>
+      <p id="f2-subtitle" class="figure-subtitle"></p>
+
+      <div class="controls controls-team">
+        <div class="control control-to">
+          <label for="f2-year">Year <output id="f2-year-out" for="f2-year"></output></label>
+          <div class="to-row">
+            <button id="f2-play" class="play-btn" type="button" aria-pressed="false">▶ Play</button>
+            <input id="f2-year" type="range" min="1960" max="2019" step="1" value="2019">
+          </div>
+        </div>
+        <div class="control">
+          <label for="f2-country">Trace a country</label>
+          <select id="f2-country"></select>
+        </div>
+      </div>
+
+      <p class="hint">Hover over a circle for details · Click a circle, or use the menu, to trace that country's path from 1960 to 2019 · Press 'Play' to watch every country move through time.</p>
+
+      <div class="error team-error" hidden>
+        Could not load the team data files. Make sure <code>team_members/merged_data_fp.csv</code> is uploaded next to this page
+        (and, if you opened the file from disk, run <code>python3 -m http.server</code> in this folder).
+      </div>
+
+      <div id="f2-legend" class="legend"></div>
+      <div id="f2-chart" class="tf-chart"></div>
+      <p id="f2-note" class="figure-note"></p>
+    </section>
+
+    <div class="point-main">
+      <p class="point-main-label">Main point</p>
+      <p>insert conclusion supporting figure 2</p>
+    </div>
+  </section>
+
+
+  <!-- figure 3 section -->
+  <section id="point-3" class="point" aria-labelledby="point-3-title">
+    <p class="kicker">Point 3</p>
+    <h2 id="point-3-title" class="section-title">Who makes it to 65?</h2>
+
+    <div class="point-details">
+      <p>insert details supporting figure 3</p>
+    </div>
+
+    <!-- figure 3 -->
+    <section id="figure-3" class="figure" aria-labelledby="f3-title">
+      <p class="kicker">Figure 3</p>
+      <h2 id="f3-title" class="figure-title">&nbsp;</h2>
+      <p id="f3-subtitle" class="figure-subtitle"></p>
+
+      <div class="controls controls-team">
+        <div class="control control-to">
+          <label for="f3-year">Year <output id="f3-year-out" for="f3-year"></output></label>
+          <div class="to-row">
+            <button id="f3-play" class="play-btn" type="button" aria-pressed="false">▶ Play</button>
+            <input id="f3-year" type="range" min="1960" max="2019" step="1" value="2019">
+          </div>
+        </div>
+        <div class="control">
+          <label for="f3-min">Highlight gaps of at least <output id="f3-min-out" for="f3-min"></output> points</label>
+          <input id="f3-min" type="range" min="0" max="30" step="1" value="0">
+        </div>
+      </div>
+
+      <p class="hint">Hover over a circle for details · Slide the second control to fade out countries with a smaller gap · Press 'Play' to watch every country move through time.</p>
+
+      <div class="error team-error" hidden>
+        Could not load the team data files. Make sure <code>team_members/survival_65_fp.csv</code> is uploaded next to this page
+        (and, if you opened the file from disk, run <code>python3 -m http.server</code> in this folder).
+      </div>
+
+      <div id="f3-legend" class="legend"></div>
+      <div id="f3-chart" class="tf-chart"></div>
+      <p id="f3-note" class="figure-note"></p>
+    </section>
+
+    <div class="point-main">
+      <p class="point-main-label">Main point</p>
+      <p>insert conclusion supporting figure 3</p>
+    </div>
+  </section>
+
+
+  <!-- figure 4 section -->
+  <section id="point-4" class="point" aria-labelledby="point-4-title">
+    <p class="kicker">Point 4</p>
+    <h2 id="point-4-title" class="section-title">Do longer lives make older societies?</h2>
+
+    <div class="point-details">
+      <p>insert details supporting figure 4</p>
+    </div>
+
+    <!-- figure 4 -->
+    <section id="figure-4" class="figure" aria-labelledby="f4-title">
+      <p class="kicker">Figure 4</p>
+      <h2 id="f4-title" class="figure-title">&nbsp;</h2>
+      <p id="f4-subtitle" class="figure-subtitle"></p>
+
+      <div class="controls controls-team">
+        <div class="control control-to">
+          <label for="f4-year">Year <output id="f4-year-out" for="f4-year"></output></label>
+          <div class="to-row">
+            <button id="f4-play" class="play-btn" type="button" aria-pressed="false">▶ Play</button>
+            <input id="f4-year" type="range" min="1960" max="2019" step="1" value="2019">
+          </div>
+        </div>
+        <div class="control">
+          <span class="control-label" id="f4-show-label">Show</span>
+          <div class="seg" role="group" aria-labelledby="f4-show-label">
+            <button type="button" class="chip" data-sex="both" aria-pressed="true">Both</button>
+            <button type="button" class="chip" data-sex="female" aria-pressed="false">Women</button>
+            <button type="button" class="chip" data-sex="male" aria-pressed="false">Men</button>
+          </div>
+        </div>
+        <div class="control">
+          <label for="f4-country">Find a country</label>
+          <select id="f4-country"></select>
+        </div>
+      </div>
+
+      <p class="hint">Hover over a pair of dots for details · Use 'Show' to look at women or men alone · Pick a country from the menu to find it · Press 'Play' to watch every country move through time.</p>
+
+      <div class="error team-error" hidden>
+        Could not load the team data files. Make sure <code>team_members/merged_data_fp.csv</code> is uploaded next to this page
+        (and, if you opened the file from disk, run <code>python3 -m http.server</code> in this folder).
+      </div>
+
+      <div id="f4-legend" class="legend"></div>
+      <div id="f4-chart" class="tf-chart"></div>
+      <p id="f4-note" class="figure-note"></p>
+    </section>
+
+    <div class="point-main">
+      <p class="point-main-label">Main point</p>
+      <p>insert conclusion supporting figure 4</p>
+    </div>
+  </section>
+
+
+  <!-- conclusion -->
+  <section id="conclusion" class="notes conclusion" aria-labelledby="conclusion-title">
+    <h2 id="conclusion-title">Conclusion</h2>
+    <p>conclude article</p>
+  </section>
+
+
+  <!-- old prototype write-up 
   <section id="prototype-notes" class="notes" aria-labelledby="notes-title">
     <h2 id="notes-title">Prototype</h2>
 
@@ -103,6 +286,7 @@
     <h3>What will be the most challenging part to design, and why?</h3>
     <p>The hardest part will be to make sure the interactive graphs in our final version teach the reader something a static chart can’t. A year slider seems simple, but dots that jump around are hard to follow, so the change needs smooth, consistent transitions to read as one story. A further challenge is explaining why the gap moves, through factors such as maternal health, smoking, war, and the alcohol-related deaths behind Russia’s 10-year gap. That means linking this chart to other World Bank indicators without crowding the page. Finally, the story needs a clear hook, middle and take away so the reader is guided instead of just shown data.</p>
   </section>
+  -->
 
 </main>
 

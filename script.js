@@ -616,3 +616,496 @@
     window.figure1 = { state, render, rowsFor, series };
   }
 })();
+
+/* Figures 2-4 */
+
+(function () {
+  const MIN_YEAR = 1960;
+  const MAX_YEAR = 2019;
+  const DROP_AGGREGATES = true;
+
+  // tries each path in order
+  const DATA = {
+    merged: ["team_members/merged_data_fp.csv", "team_members/merged_data.csv"],
+    survival: ["team_members/survival_65_fp.csv", "team_members/survival_65.csv"],
+  };
+
+  const COLORS = { female: "#c0508a", male: "#3f7fb3", ink: "#1b2a49" };
+
+  // same 48 aggregate codes as provided notebook
+  const AGGREGATES = new Set([
+    "AFE","AFW","ARB","CEB","CSS","EAP","EAR","EAS","ECA","ECS","EMU","EUU","FCS","HIC","HPC",
+    "IBD","IBT","IDA","IDB","IDX","INX","LAC","LCN","LDC","LIC","LMC","LMY","LTE","MEA","MIC",
+    "MNA","NAC","OED","OSS","PRE","PSS","PST","SAS","SSA","SSF","SST","TEA","TEC","TLA","TMN",
+    "TSA","TSS","UMC","WLD",
+  ]);
+
+  // shorter country names for menus and labels
+  const SHORT = {
+    "Russian Federation": "Russia", "Iran, Islamic Rep.": "Iran", "Egypt, Arab Rep.": "Egypt",
+    "Korea, Rep.": "South Korea", "Korea, Dem. People's Rep.": "North Korea",
+    "Congo, Dem. Rep.": "DR Congo", "Congo, Rep.": "Congo", "Syrian Arab Republic": "Syria",
+    "Venezuela, RB": "Venezuela", "Yemen, Rep.": "Yemen", "Gambia, The": "Gambia",
+    "Bahamas, The": "Bahamas", "Lao PDR": "Laos", "Kyrgyz Republic": "Kyrgyzstan",
+    "Slovak Republic": "Slovakia", "Turkiye": "Turkey", "Hong Kong SAR, China": "Hong Kong",
+    "Macao SAR, China": "Macao", "Micronesia, Fed. Sts.": "Micronesia", "St. Lucia": "Saint Lucia",
+  };
+  const tidy = (n) => SHORT[n] || n;
+
+  const fmt1 = d3.format(".1f");
+  const fmt2 = d3.format(".2f");
+  const signed = d3.format("+.1f");
+  const tooltip = d3.select("#tooltip");
+
+  Promise.all([loadFirst(DATA.merged), loadFirst(DATA.survival)])
+    .then(([merged, survival]) => {
+      const keep = (d) => !(DROP_AGGREGATES && AGGREGATES.has(d.code));
+
+      // life expectancy & share aged 65+ - Figures 2 and 4
+      const life = merged.map((d) => ({
+        code: d["Country Code"], name: d["Country Name"], year: +d.Year,
+        f: +d.female_life_expectancy, m: +d.male_life_expectancy, old: +d.population_65_plus,
+      })).filter((d) => keep(d) && [d.year, d.f, d.m, d.old].every(Number.isFinite))
+        .map((d) => ({ ...d, gap: d.f - d.m }));
+
+      // survival to age 65 - Figure 3
+      const surv = survival.map((d) => ({
+        code: d["Country Code"], name: d["Country Name"], year: +d.Year,
+        f: +d.female_survival_65, m: +d.male_survival_65,
+      })).filter((d) => keep(d) && [d.year, d.f, d.m].every(Number.isFinite))
+        .map((d) => ({ ...d, gap: d.f - d.m }));
+
+      figure2(life);
+      figure3(surv);
+      figure4(life);
+    })
+    .catch((err) => {
+      console.error(err);
+      d3.selectAll(".team-error").property("hidden", false);
+    });
+
+  function loadFirst(paths) {
+    return paths.slice(1).reduce((p, path) => p.catch(() => d3.csv(path)), d3.csv(paths[0]));
+  }
+
+
+  /* helpers based on the other figures */
+
+  // tooltip
+  function showTip(event, html) {
+    tooltip.html(html).style("opacity", 1).attr("aria-hidden", "false");
+    const node = tooltip.node(), w = node.offsetWidth, h = node.offsetHeight;
+    const maxX = window.scrollX + document.documentElement.clientWidth - 8;
+    let left = event.pageX + 16;
+    if (left + w > maxX) left = event.pageX - w - 16;
+    let top = event.pageY - h - 14;
+    if (top < window.scrollY + 8) top = event.pageY + 18;
+    tooltip.style("left", Math.max(8, left) + "px").style("top", top + "px");
+  }
+  function hideTip() { tooltip.style("opacity", 0).attr("aria-hidden", "true"); }
+  const tipRow = (a, b) => `<div class="row"><span>${a}</span><span>${b}</span></div>`;
+
+  function corr(xs, ys) {
+    const mx = d3.mean(xs), my = d3.mean(ys);
+    let sxy = 0, sxx = 0, syy = 0;
+    xs.forEach((x, i) => { const dx = x - mx, dy = ys[i] - my; sxy += dx * dy; sxx += dx * dx; syy += dy * dy; });
+    return sxy / Math.sqrt(sxx * syy);
+  }
+  const strength = (r) => (Math.abs(r) >= 0.7 ? "strongly" : Math.abs(r) >= 0.4 ? "moderately" : "weakly");
+
+  // chart size - based on box width
+  function sizeFor(sel, wide, narrow) {
+    const W = Math.max(300, Math.min(900, Math.round(document.querySelector(sel).clientWidth || 800)));
+    const small = W < 560;
+    const m = small ? { top: 16, right: 14, bottom: 52, left: 48 } : { top: 18, right: 26, bottom: 56, left: 62 };
+    const H = Math.round(W * (small ? narrow : wide));
+    return { W, H, small, ml: m.left, mt: m.top, iw: W - m.left - m.right, ih: H - m.top - m.bottom };
+  }
+
+  // grid & axes & axis titles
+  function drawAxes(layers, L, o) {
+    layers.grid.html(""); layers.axis.html("");
+    const xt = L.small ? 5 : 8, yt = o.yTicks || 7;
+    layers.grid.append("g").attr("class", "grid-x")
+      .call(d3.axisLeft(L.y).ticks(yt).tickSize(-L.iw).tickFormat(""));
+    layers.grid.append("g").attr("class", "grid-x").attr("transform", `translate(0,${L.ih})`)
+      .call(d3.axisBottom(L.x).ticks(xt).tickSize(-L.ih).tickFormat(""));
+    layers.axis.append("g").attr("class", "axis").attr("transform", `translate(0,${L.ih})`)
+      .call(d3.axisBottom(L.x).ticks(xt).tickFormat(o.xFmt || null));
+    layers.axis.append("g").attr("class", "axis")
+      .call(d3.axisLeft(L.y).ticks(yt).tickFormat(o.yFmt || null));
+    layers.axis.append("text").attr("class", "axis-label").attr("text-anchor", "middle")
+      .attr("x", L.iw / 2).attr("y", L.ih + 42).text(L.small ? o.xShort : o.xLabel);
+    layers.axis.append("text").attr("class", "axis-label").attr("text-anchor", "middle")
+      .attr("transform", "rotate(-90)").attr("x", -L.ih / 2).attr("y", -L.ml + 14)
+      .text(L.small ? o.yShort : o.yLabel);
+  }
+
+  // slider & play buttons
+  function yearControl(prefix, onChange) {
+    const input = d3.select(`#${prefix}-year`), out = d3.select(`#${prefix}-year-out`);
+    const btn = d3.select(`#${prefix}-play`);
+    let year = MAX_YEAR, timer = null;
+    const set = (y, dur) => { year = y; input.property("value", y); out.text(y); onChange(y, dur); };
+    const stop = () => {
+      if (timer) { timer.stop(); timer = null; }
+      btn.text("▶ Play").attr("aria-pressed", "false");
+    };
+    input.on("input", function () { stop(); set(+this.value, 350); });
+    btn.on("click", () => {
+      if (timer) { stop(); return; }
+      if (year >= MAX_YEAR) set(MIN_YEAR, 0);
+      btn.text("❚❚ Pause").attr("aria-pressed", "true");
+      timer = d3.interval(() => {
+        if (year >= MAX_YEAR) { stop(); return; }
+        set(year + 1, 560);
+        if (year >= MAX_YEAR) stop();
+      }, 620);
+    });
+    return { get: () => year, set, stop };
+  }
+
+  function legendItem(box, text, draw) {
+    const el = box.append("span").attr("class", "legend-item");
+    draw(el.append("svg").attr("width", 34).attr("height", 16));
+    el.append("span").text(text);
+  }
+  const legendDot = (color) => (s) => s.append("circle").attr("cx", 17).attr("cy", 8).attr("r", 5).attr("fill", color);
+
+  function fillCountries(sel, rows, noneText) {
+    const list = Array.from(d3.group(rows, (d) => d.code), ([code, v]) => ({ code, name: tidy(v[0].name) }))
+      .sort((a, b) => d3.ascending(a.name, b.name));
+    sel.html("");
+    sel.append("option").attr("value", "").text(noneText);
+    sel.selectAll("option.c").data(list).join("option").attr("class", "c")
+      .attr("value", (d) => d.code).text((d) => d.name);
+  }
+
+  let resizeTimer;
+  function onResize(fn) {
+    window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(fn, 150); });
+  }
+
+  /* Figure 2 - Tracing Gender That Outlives The Other Over Time By Country */
+  function figure2(rows) {
+    const byYr = d3.group(rows, (d) => d.year);
+    const byCode = d3.group(rows, (d) => d.code);
+    byCode.forEach((v) => v.sort((a, b) => d3.ascending(a.year, b.year)));
+    const xExt = d3.extent(rows, (d) => d.f), yExt = d3.extent(rows, (d) => d.gap);
+    let hl = "";      // country being traced
+    let L = null;
+
+    const country = d3.select("#f2-country");
+    fillCountries(country, rows, "None (show all)");
+
+    const svg = d3.select("#f2-chart").append("svg").attr("class", "tf").attr("role", "group");
+    const g = svg.append("g");
+    const layers = {
+      grid: g.append("g"), year: g.append("text").attr("class", "bg-year"), axis: g.append("g"),
+      zero: g.append("g"), trail: g.append("g"), pts: g.append("g"), top: g.append("g"),
+    };
+
+    const lg = d3.select("#f2-legend");
+    legendItem(lg, "Women live longer (above zero)", legendDot(COLORS.female));
+    legendItem(lg, "Men live longer (below zero)", legendDot(COLORS.male));
+
+    function frame() {
+      L = sizeFor("#f2-chart", 0.56, 0.95);
+      L.x = d3.scaleLinear().domain(xExt).nice().range([0, L.iw]);
+      L.y = d3.scaleLinear().domain([Math.min(yExt[0], 0), yExt[1]]).nice().range([L.ih, 0]);
+      svg.attr("viewBox", `0 0 ${L.W} ${L.H}`)
+        .attr("aria-label", "Scatterplot: women's life expectancy against the female minus male gap, one circle per country");
+      g.attr("transform", `translate(${L.ml},${L.mt})`);
+      drawAxes(layers, L, {
+        xLabel: "Female life expectancy at birth (years)", xShort: "Women's life expectancy (years)",
+        yLabel: "Female − male life expectancy (years)", yShort: "Women − men (years)",
+      });
+      layers.year.attr("x", L.iw - 8).attr("y", L.ih - 12).attr("text-anchor", "end")
+        .attr("font-size", Math.min(78, L.iw * 0.13));
+      layers.zero.html("");
+      layers.zero.append("line").attr("class", "zero-line").attr("x1", 0).attr("x2", L.iw)
+        .attr("y1", L.y(0)).attr("y2", L.y(0));
+      layers.zero.append("text").attr("class", "zone-label f").attr("x", 8).attr("y", L.y(0) - 8).text("▲ Women live longer");
+      layers.zero.append("text").attr("class", "zone-label m").attr("x", 8).attr("y", L.y(0) + 17).text("▼ Men live longer");
+    }
+
+    function writeText(year, data) {
+      const n = data.length, k = data.filter((d) => d.gap > 0).length;
+      const now = year === MAX_YEAR;
+      const lead = now ? "Today" : `In ${year}`;
+      const title = k === n
+        ? `${lead}, women ${now ? "outlive" : "outlived"} men in all ${n} countries with data`
+        : `${lead}, women ${now ? "outlive" : "outlived"} men in ${k} of ${n} countries; men ${now ? "live" : "lived"} longer in ${n - k}`;
+      d3.select("#f2-title").text(title);
+      const top = d3.greatest(data, (d) => d.gap);
+      d3.select("#f2-subtitle").text(
+        `Each circle is one country. Farther right means women live longer there; higher means a bigger gap between women's and men's life expectancy (female − male, in years).` +
+        (top ? ` Largest gap in ${year}: ${tidy(top.name)} (${signed(top.gap)} years).` : "")
+      );
+      const r = corr(data.map((d) => d.f), data.map((d) => d.gap));
+      d3.select("#f2-note").text(
+        `In ${year}, how long women live and the size of the gap are ${strength(r)} linked (r = ${fmt2(r)}; 0 means no link, 1 means a perfect link). ` +
+        `Source: World Bank life expectancy at birth by sex. Regional and income-group totals were removed.`
+      );
+    }
+
+    function update(year, dur) {
+      const data = byYr.get(year) || [];
+      const T = (s) => (dur > 0 ? s.transition().duration(dur).ease(d3.easeCubicInOut) : s);
+      layers.year.text(year);
+      writeText(year, data);
+
+      const sel = layers.pts.selectAll("circle.pt").data(data, (d) => d.code).join(
+        (e) => e.append("circle").attr("class", "pt").attr("r", 0)
+          .attr("cx", (d) => L.x(d.f)).attr("cy", (d) => L.y(d.gap)),
+        (u) => u,
+        (x) => (dur > 0 ? x.transition().duration(150).attr("r", 0).remove() : x.remove())
+      );
+      sel.classed("is-hl", (d) => d.code === hl).attr("fill", (d) => (d.gap >= 0 ? COLORS.female : COLORS.male));
+      T(sel).attr("cx", (d) => L.x(d.f)).attr("cy", (d) => L.y(d.gap)).attr("r", (d) => (d.code === hl ? 8 : L.small ? 4.2 : 5.5));
+      sel.filter((d) => d.code === hl).raise();
+
+      sel.on("mouseenter mousemove", (event, d) => showTip(event,
+          `<strong>${tidy(d.name)}</strong><div class="tip-h">${year}</div>` +
+          tipRow("Women / men", `${fmt1(d.f)} / ${fmt1(d.m)} yrs`) + tipRow("Gap", signed(d.gap) + " yrs") +
+          `<div class="tip-foot">Click to trace this country</div>`))
+        .on("mouseleave", hideTip)
+        .on("click", (event, d) => { hl = hl === d.code ? "" : d.code; country.property("value", hl); update(yc.get(), 0); });
+
+      // path of traced country across time
+      layers.trail.html(""); layers.top.html("");
+      svg.classed("trace", !!hl);
+      if (hl) {
+        const s = byCode.get(hl);
+        layers.trail.append("path").attr("class", "trail")
+          .attr("d", d3.line().x((d) => L.x(d.f)).y((d) => L.y(d.gap))(s));
+        [s[0], s[s.length - 1]].forEach((d) => layers.top.append("text").attr("class", "halo")
+          .attr("x", L.x(d.f)).attr("y", L.y(d.gap) - 10).attr("text-anchor", "middle").text(d.year));
+        const cur = s.find((d) => d.year === year);
+        if (cur) {
+          layers.top.append("circle").attr("class", "ring").attr("r", 12).attr("cx", L.x(cur.f)).attr("cy", L.y(cur.gap));
+          const flip = L.x(cur.f) > 110;   // name to left of the ring - otherwise would run off the chart
+          layers.top.append("text").attr("class", "halo").attr("x", L.x(cur.f) + (flip ? -16 : 16)).attr("y", L.y(cur.gap) + 4)
+            .attr("text-anchor", flip ? "end" : "start").text(tidy(cur.name));
+        }
+      }
+    }
+
+    const yc = yearControl("f2", update);
+    country.on("change", function () { hl = this.value; update(yc.get(), 0); });
+    frame();
+    yc.set(MAX_YEAR, 0);
+    onResize(() => { frame(); update(yc.get(), 0); });
+  }
+
+  /* Figure 3 - Gender Most Likely to Make it to Senior */
+  function figure3(rows) {
+    const byYr = d3.group(rows, (d) => d.year);
+    const lo = d3.min(rows, (d) => Math.min(d.f, d.m)), hi = d3.max(rows, (d) => Math.max(d.f, d.m));
+    const dom = [Math.max(0, lo - 2), Math.min(100, hi + 2)];
+    const gapExt = d3.extent(rows, (d) => d.gap);
+    const color = d3.scaleSequential(d3.interpolateViridis).domain(gapExt);
+    let thr = 0;
+    let L = null;
+
+    const minInput = d3.select("#f3-min");
+    minInput.attr("max", Math.floor(gapExt[1]));
+    const minOut = d3.select("#f3-min-out");
+
+    const svg = d3.select("#f3-chart").append("svg").attr("class", "tf").attr("role", "group");
+    const g = svg.append("g");
+    const layers = {
+      grid: g.append("g"), year: g.append("text").attr("class", "bg-year"), axis: g.append("g"),
+      eq: g.append("g"), pts: g.append("g"),
+    };
+
+    // color legend - gradient bar
+    const stops = d3.range(0, 1.001, 0.1).map((t) => d3.interpolateViridis(t)).join(",");
+    d3.select("#f3-legend").html(
+      `<span class="grad"><span>Women − men gap: ${signed(gapExt[0])} pts</span>` +
+      `<i class="grad-bar" style="background:linear-gradient(90deg,${stops})"></i><span>${signed(gapExt[1])} pts</span></span>`
+    );
+
+    function frame() {
+      L = sizeFor("#f3-chart", 0.72, 1.0);
+      L.x = d3.scaleLinear().domain(dom).nice().range([0, L.iw]);
+      L.y = d3.scaleLinear().domain(L.x.domain()).range([L.ih, 0]);
+      svg.attr("viewBox", `0 0 ${L.W} ${L.H}`)
+        .attr("aria-label", "Scatterplot: share of men and women surviving to age 65, one circle per country");
+      g.attr("transform", `translate(${L.ml},${L.mt})`);
+      const pct = (d) => d + "%";
+      drawAxes(layers, L, {
+        xLabel: "Men surviving to age 65 (% of cohort)", xShort: "Men reaching 65 (%)",
+        yLabel: "Women surviving to age 65 (% of cohort)", yShort: "Women reaching 65 (%)",
+        xFmt: pct, yFmt: pct,
+      });
+      layers.year.attr("x", L.iw - 8).attr("y", L.ih - 12).attr("text-anchor", "end")
+        .attr("font-size", Math.min(78, L.iw * 0.13));
+      const d0 = L.x.domain();
+      layers.eq.html("");
+      layers.eq.append("line").attr("class", "eq-line")
+        .attr("x1", L.x(d0[0])).attr("y1", L.y(d0[0])).attr("x2", L.x(d0[1])).attr("y2", L.y(d0[1]));
+      layers.eq.append("text").attr("class", "zone-label f").attr("x", 8).attr("y", 16).text("▲ Women more likely to reach 65");
+      layers.eq.append("text").attr("class", "zone-label m").attr("x", L.iw - 8).attr("y", L.ih - 62)
+        .attr("text-anchor", "end").text("Men more likely ▼");
+      layers.eq.append("text").attr("class", "annotation").attr("x", L.x(d0[0]) + 10).attr("y", L.y(d0[0]) - 8)
+        .text("Dashed line: equal survival");
+    }
+
+    function writeText(year, data) {
+      const n = data.length, k = data.filter((d) => d.gap > 0).length;
+      const now = year === MAX_YEAR;
+      const lead = now ? "Today" : `In ${year}`;
+      d3.select("#f3-title").text(k === n
+        ? `${lead}, women ${now ? "are" : "were"} more likely than men to reach age 65 in all ${n} countries`
+        : `${lead}, women ${now ? "are" : "were"} more likely than men to reach age 65 in ${k} of ${n} countries`);
+      const top = d3.greatest(data, (d) => d.gap);
+      d3.select("#f3-subtitle").text(
+        `Each circle is one country. Farther right means more men survive to 65; higher means more women do. Circles above the dashed line are countries where women are more likely to reach 65, and color shows how big the difference is.` +
+        (top ? ` Largest gap in ${year}: ${tidy(top.name)} (${signed(top.gap)} percentage points).` : "")
+      );
+      const med = d3.median(data, (d) => d.gap);
+      const big = data.filter((d) => d.gap >= thr).length;
+      d3.select("#f3-note").text(
+        `In the typical (median) country in ${year}, women's chance of reaching 65 is ${fmt1(Math.abs(med))} percentage points ${med >= 0 ? "higher" : "lower"} than men's.` +
+        (thr > 0 ? ` ${big} of ${n} countries have a gap of at least ${thr} points.` : "") +
+        ` Source: World Bank survival to age 65 (% of cohort), by sex.`
+      );
+    }
+
+    function update(year, dur) {
+      const data = byYr.get(year) || [];
+      const T = (s) => (dur > 0 ? s.transition().duration(dur).ease(d3.easeCubicInOut) : s);
+      layers.year.text(year);
+      minOut.text(thr);
+      writeText(year, data);
+
+      const sel = layers.pts.selectAll("circle.pt3").data(data, (d) => d.code).join(
+        (e) => e.append("circle").attr("class", "pt3").attr("r", 0)
+          .attr("cx", (d) => L.x(d.m)).attr("cy", (d) => L.y(d.f)),
+        (u) => u,
+        (x) => (dur > 0 ? x.transition().duration(150).attr("r", 0).remove() : x.remove())
+      );
+      T(sel).attr("cx", (d) => L.x(d.m)).attr("cy", (d) => L.y(d.f)).attr("r", L.small ? 4.6 : 6)
+        .attr("fill", (d) => color(d.gap)).attr("opacity", (d) => (d.gap >= thr ? 0.9 : 0.12));
+
+      sel.on("mouseenter mousemove", (event, d) => showTip(event,
+          `<strong>${tidy(d.name)}</strong><div class="tip-h">${year}</div>` +
+          tipRow("Women reaching 65", `${fmt1(d.f)}%`) + tipRow("Men reaching 65", `${fmt1(d.m)}%`) +
+          tipRow("Gap", `${signed(d.gap)} pts`)))
+        .on("mouseleave", hideTip);
+    }
+
+    const yc = yearControl("f3", update);
+    minInput.on("input", function () { thr = +this.value; update(yc.get(), 150); });
+    frame();
+    yc.set(MAX_YEAR, 0);
+    onResize(() => { frame(); update(yc.get(), 0); });
+  }
+
+  /* Figure 4 - Life Expectancy Based on Senior Proportion of Population */
+  function figure4(rows) {
+    const byYr = d3.group(rows, (d) => d.year);
+    const xExt = [d3.min(rows, (d) => Math.min(d.f, d.m)), d3.max(rows, (d) => Math.max(d.f, d.m))];
+    const yMax = d3.max(rows, (d) => d.old);
+    let hl = "";
+    let L = null;
+
+    const country = d3.select("#f4-country");
+    fillCountries(country, rows, "None");
+
+    const svg = d3.select("#f4-chart").append("svg").attr("class", "tf show-both").attr("role", "group");
+    const g = svg.append("g");
+    const layers = {
+      grid: g.append("g"), year: g.append("text").attr("class", "bg-year"), axis: g.append("g"),
+      pts: g.append("g"), top: g.append("g"),
+    };
+
+    const lg = d3.select("#f4-legend");
+    legendItem(lg, "Women", legendDot(COLORS.female));
+    legendItem(lg, "Men", legendDot(COLORS.male));
+    legendItem(lg, "Line = life-expectancy gap", (s) => s.append("line").attr("x1", 0).attr("x2", 34)
+      .attr("y1", 8).attr("y2", 8).attr("stroke", "#aeb8c7").attr("stroke-width", 2).attr("stroke-linecap", "round"));
+
+    function frame() {
+      L = sizeFor("#f4-chart", 0.6, 0.95);
+      L.x = d3.scaleLinear().domain(xExt).nice().range([0, L.iw]);
+      L.y = d3.scaleLinear().domain([0, yMax]).nice().range([L.ih, 0]);
+      svg.attr("viewBox", `0 0 ${L.W} ${L.H}`)
+        .attr("aria-label", "Scatterplot: life expectancy against the share of people aged 65 and older, one pair of dots per country");
+      g.attr("transform", `translate(${L.ml},${L.mt})`);
+      drawAxes(layers, L, {
+        xLabel: "Life expectancy at birth (years)", xShort: "Life expectancy (years)",
+        yLabel: "Population aged 65+ (% of total)", yShort: "Aged 65+ (%)",
+        yFmt: (d) => d + "%",
+      });
+      layers.year.attr("x", 8).attr("y", Math.min(78, L.iw * 0.13) + 4).attr("text-anchor", "start")
+        .attr("font-size", Math.min(78, L.iw * 0.13));
+    }
+
+    function writeText(year, data) {
+      const r = corr(data.map((d) => (d.f + d.m) / 2), data.map((d) => d.old));
+      d3.select("#f4-title").text(`In ${year}, life expectancy and the share of people aged 65+ are ${strength(r)} linked`);
+      d3.select("#f4-subtitle").text(
+        `Each country has a pink dot for women and a blue dot for men at the same height (the share of its population aged 65 or older); the line between them is the life-expectancy gap. Farther right means longer lives; higher means an older population.`
+      );
+      d3.select("#f4-note").text(
+        `Across the ${data.length} countries with data in ${year}, r = ${fmt2(r)} between average life expectancy (women and men combined) and the share aged 65+. ` +
+        `Source: World Bank. Regional and income-group totals were removed.`
+      );
+    }
+
+    function update(year, dur) {
+      const data = byYr.get(year) || [];
+      const T = (s) => (dur > 0 ? s.transition().duration(dur).ease(d3.easeCubicInOut) : s);
+      layers.year.text(year);
+      writeText(year, data);
+
+      const sel = layers.pts.selectAll("g.ct").data(data, (d) => d.code).join((enter) => {
+        const e = enter.append("g").attr("class", "ct");
+        e.append("line").attr("class", "l4");
+        e.append("circle").attr("class", "dm").attr("r", 0);
+        e.append("circle").attr("class", "df").attr("r", 0);
+        return e;
+      });
+      sel.classed("is-hl", (d) => d.code === hl);
+      const rOf = (d) => (d.code === hl ? 6.5 : L.small ? 3.3 : 4.6);
+      const y = (d) => L.y(d.old);
+      T(sel.select(".l4")).attr("x1", (d) => L.x(d.m)).attr("x2", (d) => L.x(d.f)).attr("y1", y).attr("y2", y);
+      T(sel.select(".dm")).attr("cx", (d) => L.x(d.m)).attr("cy", y).attr("r", rOf);
+      T(sel.select(".df")).attr("cx", (d) => L.x(d.f)).attr("cy", y).attr("r", rOf);
+      sel.filter((d) => d.code === hl).raise();
+
+      sel.on("mouseenter mousemove", (event, d) => showTip(event,
+          `<strong>${tidy(d.name)}</strong><div class="tip-h">${year}</div>` +
+          tipRow("Women / men", `${fmt1(d.f)} / ${fmt1(d.m)} yrs`) + tipRow("Gap", signed(d.gap) + " yrs") +
+          tipRow("Aged 65+", `${fmt1(d.old)}% of people`)))
+        .on("mouseleave", hideTip)
+        .on("click", (event, d) => { hl = hl === d.code ? "" : d.code; country.property("value", hl); update(yc.get(), 0); });
+
+      // label for the country picked in the menu
+      layers.top.html("");
+      svg.classed("trace", !!hl);
+      const cur = data.find((d) => d.code === hl);
+      if (cur) {
+        const xr = Math.max(L.x(cur.f), L.x(cur.m)), xl = Math.min(L.x(cur.f), L.x(cur.m));
+        const flip = xr > L.iw - 120;
+        layers.top.append("text").attr("class", "halo").attr("y", y(cur) - 12)
+          .attr("x", flip ? xl : xr).attr("text-anchor", flip ? "end" : "start").text(tidy(cur.name));
+      }
+    }
+
+    const yc = yearControl("f4", update);
+    country.on("change", function () { hl = this.value; update(yc.get(), 0); });
+    d3.selectAll("#figure-4 .seg .chip").on("click", function () {
+      const sex = this.dataset.sex;
+      svg.classed("show-both", sex === "both").classed("show-female", sex === "female").classed("show-male", sex === "male");
+      d3.selectAll("#figure-4 .seg .chip").classed("active", function () { return this.dataset.sex === sex; })
+        .attr("aria-pressed", function () { return String(this.dataset.sex === sex); });
+    });
+    d3.select('#figure-4 .seg .chip[data-sex="both"]').classed("active", true);
+    frame();
+    yc.set(MAX_YEAR, 0);
+    onResize(() => { frame(); update(yc.get(), 0); });
+  }
+})();
